@@ -1,0 +1,58 @@
+---
+title: "Cetecean Species Distribution"
+author: "Mukta Kelkar"
+date: "2/20/2021"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(raster)  
+library(tidyverse)
+library(here)
+library(rnaturalearth)
+```
+
+### Read in Data
+
+```{r}
+#Pull all .tif files from folder
+my_files <- list.files(path = "ca_cetaceans", full.names = TRUE)
+
+#Use `raster::stack` to rasterize all the layers at once
+cetecean_stack <- raster::stack(my_files)
+
+#Use `raster::aggregate()` to simplify data 
+cetecean_agg <- raster::aggregate(cetecean_stack, fact = 3, fun = mean)
+
+#View data
+cetecean_stack
+summary(cetecean_stack)
+
+#Preliminary visualization of data
+plot(cetecean_stack)
+
+```
+
+### Wrangle Data
+
+```{r}
+#Calculate NDVI
+ndvi <- cetecean_stack
+
+ndvi[ndvi<.8] <- NA
+
+plot(ndvi,
+     main = "NDVI > 0.8")
+```
+
+
+### Create a Raster
+
+### Create a Static Map
+
+### References
+
+Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., & Froese, R. (2016). AquaMaps: Predicted range maps for aquatic species. [www.aquamaps.org](www.aquamaps.org)
