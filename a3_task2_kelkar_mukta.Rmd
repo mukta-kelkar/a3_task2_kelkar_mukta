@@ -1,10 +1,11 @@
 ---
-title: "Cetecean Species Distribution"
+title: "Cetecean Species Richness near California"
 author: "Mukta Kelkar"
 date: "2/20/2021"
 output: 
   html_document:
     code_folding: hide
+    theme: cosmo
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +16,7 @@ library(here)
 library(rnaturalearth)
 ```
 
-### Read in Data
+### Step 1: Read in Data
 
 ```{r}
 #Pull all .tif files from folder
@@ -24,34 +25,64 @@ my_files <- list.files(path = "ca_cetaceans", full.names = TRUE)
 #Use `raster::stack` to rasterize all the layers at once
 cetecean_stack <- raster::stack(my_files)
 
-#Use `raster::aggregate()` to simplify data 
-cetecean_agg <- raster::aggregate(cetecean_stack, fact = 3, fun = mean)
+#Read in shapefile using `rnaturalearth`
+coastline <- ne_countries(scale = 110, returnclass = "sf")
 
 #View data
-cetecean_stack
-summary(cetecean_stack)
+#cetecean_stack
+#summary(cetecean_stack)
 
 #Preliminary visualization of data
-plot(cetecean_stack)
+#plot(cetecean_stack)
 
 ```
 
-### Wrangle Data
+### Step 2: Filer the Data
 
 ```{r}
-#Calculate NDVI
-ndvi <- cetecean_stack
+#Create a filter function 
+is_present <- function(x, thresh = 0.7) {
+    y <- ifelse(x >= thresh, 1, NA)
+    return(y)
+}
 
-ndvi[ndvi<.8] <- NA
+#filter the raster
+cetecean_present <- calc(cetecean_stack, fun = is_present)
 
-plot(ndvi,
-     main = "NDVI > 0.8")
+#add up all the raster layers
+cetecean_prob <- calc(cetecean_present, fun = sum, na.rm = TRUE)
+
+#change the initial raster into a dataframe
+cetecean_stack_df <- raster::rasterToPoints(cetecean_stack) %>%
+  as.data.frame()
+
+#change the filtered raster layer into a dataframe
+cetecean_prob_df <- raster::rasterToPoints(cetecean_prob) %>%
+  as.data.frame()
+
+#cetecean_prob_df[is.na(cetecean_prob_df[])] <- 0
 ```
 
+### Step 3: Create a Static Map
 
-### Create a Raster
+Here I use `ggplot2` and `rnaturalearth` to create a map of the probability of cetacean occurrence along the coast of California.
 
-### Create a Static Map
+```{r}
+ggplot() +
+  geom_raster(data = cetecean_prob_df, aes(x = x, y = y, fill = layer)) +
+  geom_sf(data = coastline) +
+  coord_sf(expand = 0, xlim = c(-130,-110), ylim = c(28,45)) +
+  scale_fill_gradient2(low = 'yellow', mid = "red", high =  'purple', midpoint = 13) +
+  labs(
+    x = "Latitude",
+    y = "Longitude",
+    fill = "Species Richness",
+    title = "Cetecean species richness along the California coast"
+  ) +
+  theme_minimal()
+  
+```
+
 
 ### References
 
